@@ -1,0 +1,21 @@
+version: '3'
+
+services:
+
+  nodejs:
+    image: luismascarenhas/node
+    container_name: nodejs
+    networks: 
+      - desafio-docker-node
+
+  nginx-node:
+    image: luismascarenhas/nginx-node
+    container_name: nginx-node
+    networks:
+      - desafio-docker-node
+    ports:
+      - "3000:80"
+
+networks:
+  desafio-docker-node:
+    driver: bridge
