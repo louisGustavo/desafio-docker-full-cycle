@@ -3,13 +3,15 @@ version: '3'
 services:
 
   nodejs:
-    image: luismascarenhas/node
+    build:
+      context: node
     container_name: nodejs
     networks: 
       - desafio-docker-node
 
   nginx-node:
-    image: luismascarenhas/nginx-node
+    build: 
+      context: nginx
     container_name: nginx-node
     networks:
       - desafio-docker-node
