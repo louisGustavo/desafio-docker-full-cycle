@@ -9,6 +9,20 @@ services:
     networks: 
       - desafio-docker-node
 
+  mysql-databse:
+    image: mysql:5.7
+    command: --innodb-use-native-aio=0
+    container_name: database
+    restart: always
+    tty: true
+    volumes:
+      - ./mysql:/var/lib/mysql
+    environment:
+      - MYSQL_DATABASE=nodedb
+      - MYSQL_ROOT_PASSWORD=root
+    networks:
+      - desafio-docker-node
+
   nginx-node:
     build: 
       context: nginx
