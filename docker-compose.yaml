@@ -9,7 +9,7 @@ services:
     networks: 
       - desafio-docker-node
 
-  mysql-databse:
+  mysql-database:
     image: mysql:5.7
     command: --innodb-use-native-aio=0
     container_name: database
