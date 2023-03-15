@@ -115,3 +115,58 @@ Olhei algumas threads sobre isso até encontrar essa:
 Em alguns lugares falam que precisa apagar o conteúdo da /var/lib/mysql antes de criar. Porém não conseguia achar um comando que rodasse isso da maneira correta
 
 Por fim, apaguei a imagem que eu já tinha gerado relacionada no "docker images" gerei novamente com o meu próprio Dockerfile e deu certo. O estranho que mesmo não compartilhando volumes, ele não perde os dados salvos no container (talvez seja porque o container não é apagado e sim só parado)
+<br><br>
+
+### Configuração do Dockerize
+
+Após o envio do desafio 2 recebi a solicitação para incluir o dockerize para que a aplicação NodeJs aguardasse a subida do container mySQL. Fiz com base no material anotado onde, o container NodeJS faria a instalação da ferramenta dockerize e pelo manifesto do docker-compose faríamos duas alterações sendo elas:
+
+1. A inclusão da declaração de dependência que o container NodeJS teria do mysql (depends_on);
+2. A manipulação do entrypoint do NodeJs para que ele rodasse o comando abaixo antes mesmo do seu próprio entrypoint
+
+```
+dockerize -wait tcp://database:3306 -timeout 40s
+```
+
+Na primeira tentativa alterei como fizemos na aula inserido exatamente a linha abaixo no manifesto
+
+```
+entrypoint: dockerize -wait tcp://database:3306 -timeout 40s docker-entrypoint.sh
+```
+
+Porém por algum motivo, ao subir as aplicações morria no seguinte erro
+
+```
+Problem with dial: dial tcp 192.168.16.2:0: connect: connection refused. Sleeping 1s
+...
+database    | 2023-03-15T23:44:14.037589Z 0 [Note] mysqld: ready for connections.
+database    | Version: '5.7.41'  socket: '/var/run/mysqld/mysqld.sock'  port: 3306  MySQL Community Server (GPL)
+nodejs      | 2023/03/15 23:44:14 Connected to tcp://database:3306
+nodejs      | 2023/03/15 23:44:14 Command finished successfully.
+database    | 2023-03-15T23:44:14.743963Z 2 [Note] Got an error reading communication packets
+nodejs exited with code 0
+```
+
+O NodeJs tentava conectar no mysql, enquanto isso o mysql ia subindo o container. Assim que ele consegue conexão com o mysql, o NodeJs deveria iniciar o entrypoint dele mas recebo antes um erro do mysql com a mensagem "Got an error reading communication packets". E o NodeJs morre.
+
+Procurei por informações na internet sobre, mas a maioria falava pra aumentar o tamanho máximo dos packets, mas que no meu caso aparentemente não faz sentido pois não só tenho a criação de um única tabela sem dados.
+
+Por fim procurei nos fórums da própria FullCycle com uma mensagem que eu tinha recebido logo no começo dos logs do docker-compose (Problem with dial: dial tcp...) e achei essa thread
+
+[Problem with dial: dial tcp 192.168.16.2:0: connect: connection refused. Sleeping 1s](https://forum.code.education/forum/topico/problem-with-dial-dial-tcp-1921681620-connect-connection-refused-sleeping-1s-1650/)
+
+Nela o Rogério Cassares estava com o mesmo problema que o meu, e com a ajuda do moderador Gabriel Carneiro Jr, ele fizeram um pequena mudança na própria linha do manifesto do entrypoint onde, após aguardar o mysql subir eles somente forçam o node executar o arquivo index.js da aplicação. Deixando-a da seguinte forma:
+
+```
+entrypoint: dockerize -wait tcp://database:3306 -timeout 40s node index.js
+```
+
+Fiz os testes aqui e deu certo também. Aplicação de pé, aguardando o container mysql rodar e iniciando posteriormente o container NodeJS com sucesso.
+
+```
+database    | 2023-03-15T23:45:05.512022Z 0 [Note] Event Scheduler: Loaded 0 events
+database    | 2023-03-15T23:45:05.512356Z 0 [Note] mysqld: ready for connections.
+database    | Version: '5.7.41'  socket: '/var/run/mysqld/mysqld.sock'  port: 3306  MySQL Community Server (GPL)
+nodejs      | 2023/03/15 23:45:06 Connected to tcp://database:3306
+nodejs      | Rodando aplicação na porta 3000
+```
