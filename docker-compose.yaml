@@ -8,6 +8,9 @@ services:
     container_name: nodejs
     networks: 
       - desafio-docker-node
+    depends_on:
+      - mysql-database
+    entrypoint: dockerize -wait tcp://database:3306 -timeout 40s node index.js
 
   mysql-database:
     build:
@@ -29,7 +32,7 @@ services:
     networks:
       - desafio-docker-node
     ports:
-      - "3000:80"
+      - "8080:80"
 
 networks:
   desafio-docker-node:
