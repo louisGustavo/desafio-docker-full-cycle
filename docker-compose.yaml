@@ -6,8 +6,6 @@ services:
     build:
       context: node
     container_name: nodejs
-    networks: 
-      - desafio-docker-node
     depends_on:
       - mysql-database
     entrypoint: dockerize -wait tcp://database:3306 -timeout 40s node index.js
@@ -25,18 +23,10 @@ services:
     environment:
       - MYSQL_DATABASE=nodedb
       - MYSQL_ROOT_PASSWORD=root
-    networks:
-      - desafio-docker-node
 
   nginx-node:
     build: 
       context: nginx
     container_name: nginx-node
-    networks:
-      - desafio-docker-node
     ports:
       - "8080:80"
-
-networks:
-  desafio-docker-node:
-    driver: bridge
