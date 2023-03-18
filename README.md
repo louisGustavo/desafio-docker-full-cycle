@@ -177,7 +177,9 @@ Na segunda entrega do desafio, conversei com o moderador Lucian Tavares que meu 
 
 O primeiro ponto que conversamos foi sobre a questão da alteração feita no entrypoint do docker-compose que fez a aplicação funcionar como deveria. Ele me explicou que o container não quebrou pois na própria imagem Nodejs, o entrypoint já é chamado, não sendo necessário declarar explicitamente no Dockerfile ou no docker-compose. Um outro ponto interessante que foi abordado é que quando há um entrypoint declarado no docker-compose, é desprezado a declaração do mesmo no Dockerfile.
 
-Outra melhoria que foi sugerida implementar foi remover a declaração do "npm install" do Dockerfile e passar depois do dockerize no próprio entrypoint, dessa forma ele segura a instalação dos pacotes até a confirmação da comunicação com o banco de dados e também evita que o container tente acessar uma lib que ainda não foi previamente instalada. Outra opção seria criar um volume anônimo da node_modules, o que teria o mesmo impacto.
+Outra melhoria que foi sugerida implementar foi remover a declaração do "npm install" do Dockerfile e passar depois do dockerize no próprio entrypoint, dessa forma ele segura a instalação dos pacotes até a confirmação da comunicação com o banco de dados e também evita que o container tente acessar uma lib que ainda não foi previamente instalada. Outra opção seria criar um volume anônimo\* da node_modules, o que teria o mesmo impacto.
+
+\*Volume anônimo cria a pasta node_modules mas ela não exibe nada localmente dentro dela. Seria como se fosse um "link" do conteúdo no container
 
 Foi solicitado também:
 
