@@ -170,3 +170,42 @@ database    | Version: '5.7.41'  socket: '/var/run/mysqld/mysqld.sock'  port: 33
 nodejs      | 2023/03/15 23:45:06 Connected to tcp://database:3306
 nodejs      | Rodando aplicação na porta 3000
 ```
+
+### Dúvidas e otimização do Desafio
+
+Na segunda entrega do desafio, conversei com o moderador Lucian Tavares que meu ajudou a sanar algumas dúvidas e deu também algumas dicas de melhorias que poderiam ser implementadas no projeto.
+
+O primeiro ponto que conversamos foi sobre a questão da alteração feita no entrypoint do docker-compose que fez a aplicação funcionar como deveria. Ele me explicou que o container não quebrou pois na própria imagem Nodejs, o entrypoint já é chamado, não sendo necessário declarar explicitamente no Dockerfile ou no docker-compose. Um outro ponto interessante que foi abordado é que quando há um entrypoint declarado no docker-compose, é desprezado a declaração do mesmo no Dockerfile.
+
+Outra melhoria que foi sugerida implementar foi remover a declaração do "npm install" do Dockerfile e passar depois do dockerize no próprio entrypoint, dessa forma ele segura a instalação dos pacotes até a confirmação da comunicação com o banco de dados e também evita que o container tente acessar uma lib que ainda não foi previamente instalada. Outra opção seria criar um volume anônimo da node_modules, o que teria o mesmo impacto.
+
+Foi solicitado também:
+
+- Remover a exposição da porta 3000 no container NodeJs, pois o Nginx já está fazendo o papel intermediador e vamos acessar pela porta dele;
+- Remover a declaração de network do docker-compose, pois nas versões mais recentes ele já cria de forma automática. Sendo necessário somente quando temos declarações em docker-composes diferentes;
+- Apontar o USER nos Dockerfiles para que os arquivos tem o mesmo nível de permissão do usuário, caso contrário a permissão padrão será a de root, obrigado a declaração do "sudo" e não permitindo manipular os arquivos do container de forma livre
+- Mapear os volumes do NodeJs para permitir manipular os arquivos localmente
+- Criar um bash.sh para abstrair os comandos que serão passados no entrypoint num arquivo isolado
+
+### Configuração do usuário
+
+Estava tentando fazer as configurações referente a passar o comando "npm install" do Dockerfile para o entrypoint, criar o volume compartilhado com a minha pasta local e criar o volume anônimo da node_modules. Porém estava levando um erro de permission denied.
+
+Isso se deve ao fato que nas primeiras tentativas eu criei tudo baseado no usuário root e agora não conseguia acessar pois o meu usuário estava abaixo deste. Então o que eu precisava fazer era determinar que o usuário do container estaria no mesmo nível de permissão do meu usuário
+
+Para isso, inclui no Dockerfile o "USER node", tentei criar o diretório e instalar as dependência nodejs a partir dele, porém sem sucesso. Era retornado um erro de permissão logo na criação da pasta "usr/src/app". Fiz isso seguindo o material complementar passado pelo próprio Tavares.
+
+[YouTube - Canal FullCycle | Docker avançado no VSCode](https://www.youtube.com/watch?v=oAcrXHRAqoY&t=2646s)
+
+E procurando em alguns forums achei uma solução que ainda preciso validar se é a correta onde:
+
+1. Eu crio a pasta pelo usuário root;
+2. Passo a permissão dela para o grupo node;
+3. Declaro o "USER node"
+4. Declaro o "WORKDIR"
+5. Copio o package.json para o container;
+6. Rodo "npm install" pelo Dockerfile e não pelo entrypoint
+
+Fonte: [Cannot create directory. Permission denied inside docker container](https://stackoverflow.com/questions/45553074/cannot-create-directory-permission-denied-inside-docker-container)
+
+Dessa forma a aplicação rodou corretamente, porém a instalação das dependências do nodejs rodaram em paralelo com a subida do container mysql
