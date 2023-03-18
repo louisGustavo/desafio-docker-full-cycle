@@ -11,6 +11,9 @@ services:
     depends_on:
       - mysql-database
     entrypoint: dockerize -wait tcp://database:3306 -timeout 40s node index.js
+    volumes:
+      - ./node:/usr/src/app
+      - /usr/src/app/node_modules
 
   mysql-database:
     build:
