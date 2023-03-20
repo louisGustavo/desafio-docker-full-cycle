@@ -171,6 +171,8 @@ nodejs      | 2023/03/15 23:45:06 Connected to tcp://database:3306
 nodejs      | Rodando aplicação na porta 3000
 ```
 
+<br><br>
+
 ### Dúvidas e otimização do Desafio
 
 Na segunda entrega do desafio, conversei com o moderador Lucian Tavares que meu ajudou a sanar algumas dúvidas e deu também algumas dicas de melhorias que poderiam ser implementadas no projeto.
@@ -188,8 +190,9 @@ Foi solicitado também:
 - Apontar o USER nos Dockerfiles para que os arquivos tem o mesmo nível de permissão do usuário, caso contrário a permissão padrão será a de root, obrigado a declaração do "sudo" e não permitindo manipular os arquivos do container de forma livre
 - Mapear os volumes do NodeJs para permitir manipular os arquivos localmente
 - Criar um bash.sh para abstrair os comandos que serão passados no entrypoint num arquivo isolado
+  <br><br>
 
-### Configuração do usuário
+### Configuração do usuário [NodeJs]
 
 Estava tentando fazer as configurações referente a passar o comando "npm install" do Dockerfile para o entrypoint, criar o volume compartilhado com a minha pasta local e criar o volume anônimo da node_modules. Porém estava levando um erro de permission denied.
 
@@ -211,3 +214,58 @@ E procurando em alguns forums achei uma solução que ainda preciso validar se �
 Fonte: [Cannot create directory. Permission denied inside docker container](https://stackoverflow.com/questions/45553074/cannot-create-directory-permission-denied-inside-docker-container)
 
 Dessa forma a aplicação rodou corretamente, porém a instalação das dependências do nodejs rodaram em paralelo com a subida do container mysql
+<br><br>
+
+### Configuração do usuário [MySQL]
+
+Estava com uma certa dificuldade de criar os volumes para o banco mysql com um usuário diferente do "root". Entrei no container mysql e não achei um usuário de mesmo nível de permissão e grupo que o meu (1000:1000). Tentei primeiro criar um usuário via dockerfile e atribuir com "chown" a permissão para a pasta /var/lib/mysql e mudar o usuário do container para este novo, porém sem sucesso, pois quando começava a subir o container ele morria com erro de permissão.
+
+Depois de algumas tentativas, cheguei em algo que não fez o container morrer, mas ainda não tinha permissão total de manipular os arquivos localmente:
+
+Dockerfile
+
+```
+FROM mysql:5.7
+
+ARG UID=1000
+ARG GID=1000
+
+RUN groupadd -g "${GID}" db \
+    && useradd --create-home --no-log-init -u "${UID}" -g "${GID}" db
+
+COPY ./sql/ /docker-entrypoint-initdb.d/
+
+CMD [ "chown", "-R", "1000:1000", "/var/lib/mysql" ]
+
+```
+
+Docker-compose
+
+```
+mysql-database:
+build:
+    context: mysql
+command: --innodb-use-native-aio=0
+container_name: database
+restart: always
+tty: true
+environment:
+    - MYSQL_DATABASE=nodedb
+    - MYSQL_ROOT_PASSWORD=root
+volumes:
+    - ./mysql/dbdata:/var/lib/mysql
+```
+
+Como resultado, ele alterou o user da pasta dbdata para "systemd-coredump" e o meu grupo "luismascarenhas". Identifiquei que este usuário "systemd-coredump" seria equivalente ao usuário "mysql" do container. Porém desta forma não tenho permissão para manipular os arquivos da pasta a menos que eu de um chown para o meu username.
+
+O moderador Lucian me ajudou novamente e sugeriu que eu simplesmente alterasse o id do usuário mysql de "999" para "1000" que seria o mesmo do meu usuário local. Dessa forma, quando os volumes fossem compartilhados, eu conseguiria manipular livremente e foi o que deu certo:
+
+MySQL DockerFile
+
+```
+FROM mysql:5.7
+
+RUN usermod -u 1000 mysql
+
+COPY ./sql/ /docker-entrypoint-initdb.d/
+```
