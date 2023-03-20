@@ -23,6 +23,8 @@ services:
     environment:
       - MYSQL_DATABASE=nodedb
       - MYSQL_ROOT_PASSWORD=root
+    volumes:
+      - ./mysql/dbdata:/var/lib/mysql
 
   nginx-node:
     build: 
